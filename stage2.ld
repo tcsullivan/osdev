@@ -1,6 +1,6 @@
 OUTPUT_ARCH(i386)
 OUTPUT(stage2.elf)
-ENTRY(stage2)
+ENTRY(main)
 
 MEMORY
 {
@@ -11,10 +11,10 @@ SECTIONS
 {
     .text : {
         *(.entry)
-        *(.text)
-        *(.rodata)
-        *(.data)
-        *(.bss)
+        *(.text*)
+        *(.rodata*)
+        *(.data*)
+        *(.bss*)
     } > MEM
 
     /DISCARD/ : {

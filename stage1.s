@@ -19,6 +19,27 @@ boot:
     xor dx, dx
     mov bp, msg
     int 0x10
+.checkLowMemory:
+    clc
+    int 0x12
+    jc .loadStage2
+    mov [mem_low], ax
+.checkHighMemory:
+    xor cx, cx
+    clc
+    mov ax, 0xE801
+    int 0x15
+    jc .loadStage2
+    cmp ah, 0x86
+    je .loadStage2
+    cmp ah, 0x80
+    je .loadStage2
+    jcxz .checkHighMemoryAx
+    mov ax, cx
+    mov bx, dx
+.checkHighMemoryAx:
+    mov [mem_high1], ax
+    mov [mem_high2], bx
 .loadStage2:
     mov ax, 0x1000 ; for stage2
     mov es, ax
@@ -52,6 +73,10 @@ boot:
 msg:     db "Loading stage2...",0x0D,0x0A
 msg_end:
 
+mem_low: dw 0
+mem_high1: dw 0
+mem_high2: dw 0
+
 align 16
 
 gdt:
@@ -68,15 +93,23 @@ gdtr:
 bits 32
 
 stage2Entry:
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
+    mov dx, 0x10
+    mov ds, dx
+    mov es, dx
+    mov fs, dx
+    mov gs, dx
+    mov ss, dx
     mov esp, 0x00010000
     mov ebp, 0x00010000
-    jmp 0x08:0x00010000
+    xor eax, eax
+    mov ax, [0x7C00 + mem_high2]
+    push eax
+    mov ax, [0x7C00 + mem_high1]
+    push eax
+    mov ax, [0x7C00 + mem_low]
+    push eax
+    mov eax, 0x00010000
+    call eax
     cli
     hlt
 
