@@ -1,23 +1,21 @@
 OUTPUT_ARCH(i386)
-OUTPUT(boot.elf)
-ENTRY(boot)
+OUTPUT(stage2.elf)
+ENTRY(stage2)
 
 MEMORY
 {
-    MEM  (rx) : org = 0x3E,  len = 448
-    BOOT (rx) : org = 0x1FE, len = 2
+    MEM  (rwx) : org = 0x10000,  len = 8K
 }
 
 SECTIONS
 {
     .text : {
+        *(.entry)
         *(.text)
         *(.rodata)
+        *(.data)
+        *(.bss)
     } > MEM
-
-    .bootable : {
-        *(.bootable)
-    } > BOOT
 
     /DISCARD/ : {
         *(.dynsym)
@@ -26,6 +24,7 @@ SECTIONS
         *(.eh_frame*)
         *(.gnu.hash)
         *(.comment)
+        *(.note*)
     }
 }
 

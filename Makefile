@@ -1,10 +1,15 @@
 all:
-	gcc -m32 -maddress-mode=short \
-	    -ffreestanding -fno-pie -nostdlib -no-pie \
-	    -Wl,--no-dynamic-linker -Wl,-Tlinker_boot.ld -Wl,--build-id=none \
-	    boot.c
-	objcopy -O binary boot.elf boot.bin
-	dd if=/dev/zero of=disk.img bs=1k count=1440
-	mkfs.fat -F 12 -R 2 disk.img
-	dd if=boot.bin  of=disk.img conv=notrunc bs=1 seek=62
+	@nasm stage1.s -o stage1.bin
+	@gcc -m32 -masm=intel \
+	    -ggdb -O0 \
+        -I. -DPRINTF_DISABLE_SUPPORT_FLOAT -DPRINTF_DISABLE_SUPPORT_LONG_LONG \
+	    -ffreestanding -nostdlib -fno-pie -no-pie \
+	    -Wl,-Tstage2.ld \
+	    stage2.c printf.c
+	@objcopy -O binary -j .text stage2.elf stage2.bin
+	@dd if=/dev/zero of=disk.img bs=1k count=1440
+	@mkfs.fat -F 12 -R 8 disk.img
+	@dd if=stage1.bin of=disk.img conv=notrunc bs=1 seek=62
+	@dd if=stage2.bin of=disk.img conv=notrunc bs=1 seek=512
+	@rm stage1.bin stage2.bin stage2.elf
 
