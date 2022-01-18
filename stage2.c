@@ -42,6 +42,8 @@ void kputs(const char *s) {
     termCursor(term - TERM_BASE);
 }
 
+#include "idt.h"
+
 // mem_low: kB starting at zero (usually zero to 0xA0000, 640kB)
 // mem_high1: kB start at 0x0010'0000 (around 15MB)
 // mem_high2: 64kB start at 0x0100'0000 (the rest)
@@ -51,12 +53,17 @@ int main(uint32_t mem_low, uint32_t mem_high1, uint32_t mem_high2)
     kputs("Welcome!\n");
 
     char buf[64];
-    snprintf(buf, sizeof(buf), "Mem: %lu, %lu, %lu.\n", mem_low, mem_high1, mem_high2);
-    kputs(buf);
-    snprintf(buf, sizeof(buf), "Total Mem: %lu kB", mem_low + mem_high1 + (mem_high2 * 64));
+    snprintf(buf, sizeof(buf), "Total Mem: %lu kB\n", mem_low + mem_high1 + (mem_high2 * 64));
     kputs(buf);
 
-    while (1);
+    idtInitialize();
+    asm("sti");
+
+    kputs("Interrupt table installed.");
+
+    asm("int 0x03");
+    asm("int 0x04");
+
     return 0;
 }
 

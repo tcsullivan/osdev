@@ -43,14 +43,14 @@ boot:
 .loadStage2:
     mov ax, 0x1000 ; for stage2
     mov es, ax
-    mov ax, 0x0208 ; 8 sectors = 4k
+    mov ax, 0x0210 ; 16 sectors = 8k
     xor bx, bx
     mov cx, 0x0002
     xor dh, dh
     mov dl, 0x00   ; floppy 0
     int 0x13
     jc .fail
-    cmp ax, 0x0008
+    cmp ax, 0x0010 ; confirm read count
     jne .fail
 .enableA20Line:
     in al, 0x92
@@ -68,10 +68,20 @@ boot:
     mov cr0, eax
     jmp 0x08:stage2Entry + 0x7C00
 .fail:
+    mov ax, 0x07C0
+    mov es, ax
+    mov ax, 0x1301
+    mov bx, 0x0007
+    mov cx, err_end - err
+    mov dx, 0x0100
+    mov bp, err
+    int 0x10
     jmp $
 
 msg:     db "Loading stage2...",0x0D,0x0A
 msg_end:
+err:     db "Error!"
+err_end:
 
 mem_low: dw 0
 mem_high1: dw 0
