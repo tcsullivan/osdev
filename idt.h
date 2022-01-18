@@ -51,12 +51,38 @@ __attribute__((naked)) static void isr_unused28(void) { asm("cli; push 0; push 2
 __attribute__((naked)) static void isr_unused29(void) { asm("cli; push 0; push 29; jmp isr_common"); }
 __attribute__((naked)) static void isr_unused30(void) { asm("cli; push 0; push 30; jmp isr_common"); }
 __attribute__((naked)) static void isr_unused31(void) { asm("cli; push 0; push 31; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused32(void) { asm("cli; push 0; push 32; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused33(void) { asm("cli; push 0; push 33; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused34(void) { asm("cli; push 0; push 34; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused35(void) { asm("cli; push 0; push 35; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused36(void) { asm("cli; push 0; push 36; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused37(void) { asm("cli; push 0; push 37; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused38(void) { asm("cli; push 0; push 38; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused39(void) { asm("cli; push 0; push 39; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused40(void) { asm("cli; push 0; push 40; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused41(void) { asm("cli; push 0; push 41; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused42(void) { asm("cli; push 0; push 42; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused43(void) { asm("cli; push 0; push 43; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused44(void) { asm("cli; push 0; push 44; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused45(void) { asm("cli; push 0; push 45; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused46(void) { asm("cli; push 0; push 46; jmp isr_common"); }
+__attribute__((naked)) static void isr_unused47(void) { asm("cli; push 0; push 47; jmp isr_common"); }
 
 static void isr_common_main(uint32_t n, uint32_t e)
 {
     static char buf[20];
-    sprintf(buf, "!%u %u!", e & 0xFF, n & 0xFF);
+
+    n &= 0xFF;
+    e &= 0xFF;
+
+    sprintf(buf, "!%u!", n);
     kputs(buf);
+
+    if (n >= 32) {
+        outb(0x20, 0x20);
+        if (n >= 40)
+            outb(0xA0, 0x20);
+    }
 }
 
 __attribute__((naked))
@@ -111,6 +137,34 @@ void idtInitialize(void)
     idtSetEntry(29, isr_unused29);
     idtSetEntry(30, isr_unused30);
     idtSetEntry(31, isr_unused31);
+    idtSetEntry(32, isr_unused32);
+    idtSetEntry(33, isr_unused33);
+    idtSetEntry(34, isr_unused34);
+    idtSetEntry(35, isr_unused35);
+    idtSetEntry(36, isr_unused36);
+    idtSetEntry(37, isr_unused37);
+    idtSetEntry(38, isr_unused38);
+    idtSetEntry(39, isr_unused39);
+    idtSetEntry(40, isr_unused40);
+    idtSetEntry(41, isr_unused41);
+    idtSetEntry(42, isr_unused42);
+    idtSetEntry(43, isr_unused43);
+    idtSetEntry(44, isr_unused44);
+    idtSetEntry(45, isr_unused45);
+    idtSetEntry(46, isr_unused46);
+    idtSetEntry(47, isr_unused47);
+
+    // IRQ remapping
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0x0);
+    outb(0xA1, 0x0);
 
     asm("lidt [eax]" :: "a" (&idt_idtr));
 }

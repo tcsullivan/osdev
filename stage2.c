@@ -57,13 +57,17 @@ int main(uint32_t mem_low, uint32_t mem_high1, uint32_t mem_high2)
     kputs(buf);
 
     idtInitialize();
-    asm("sti");
-
     kputs("Interrupt table installed.");
 
-    asm("int 0x03");
-    asm("int 0x04");
+    // PIT
+    uint32_t divisor = (1193180 / 50) & 0xFFFF;
+    outb(0x43, 0x36);
+    outb(0x40, divisor & 0xFF);
+    outb(0x40, divisor >> 8);
 
+    asm("sti");
+
+    while (1);
     return 0;
 }
 
