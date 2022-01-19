@@ -5,44 +5,17 @@
  *    0010 0000 = 1M
  */
 
+#include "idt.h"
+#include "port.h"
 #include "printf.h"
+#include "tinyalloc.h"
+#include "videoram.h"
 
 #include <stdint.h>
 
-void outb(uint16_t port, uint8_t val) {
-    asm("out %0, %1" :: "Nd" (port), "a" (val));
-}
-#define TERM_WIDTH  (80)
-#define TERM_HEIGHT (25)
-#define TERM_BASE   ((uint16_t *)0xB8000)
-
-volatile static uint16_t *term = TERM_BASE + TERM_WIDTH;
-static uint8_t termColor = 0x07;
+#define MEM_HIGH1_START ((void *)0x00100000)
 
 static const char msg[] = "Welcome to stage2!";
-
-void termCursor(unsigned int pos) {
-    outb(0x03D4, 0x0F);
-    outb(0x03D5, pos & 0xFF);
-    outb(0x03D4, 0x0E);
-    outb(0x03D5, pos >> 8);
-}
-
-void kputs(const char *s) {
-    uint16_t tc = termColor << 8;
-    while (*s) {
-        if (*s == '\n') {
-            ++s;
-            term += TERM_WIDTH;
-            term = TERM_BASE + (term - TERM_BASE) / TERM_WIDTH * TERM_WIDTH;
-        } else {
-            *term++ = tc | *s++;
-        }
-    }
-    termCursor(term - TERM_BASE);
-}
-
-#include "idt.h"
 
 // mem_low: kB starting at zero (usually zero to 0xA0000, 640kB)
 // mem_high1: kB start at 0x0010'0000 (around 15MB)
@@ -52,8 +25,12 @@ int main(uint32_t mem_low, uint32_t mem_high1, uint32_t mem_high2)
 {
     kputs("Welcome!\n");
 
-    char buf[64];
-    snprintf(buf, sizeof(buf), "Total Mem: %lu kB\n", mem_low + mem_high1 + (mem_high2 * 64));
+    ta_init(MEM_HIGH1_START, (void *)(MEM_HIGH1_START + mem_high1 * 1024), 256, 16, 4);
+
+    char *buf = ta_alloc(64);
+    snprintf(buf, 64, "Total Mem: %lu kB\n", mem_low + mem_high1 + (mem_high2 * 64));
+    kputs(buf);
+    snprintf(buf, 64, "Heap given %lu kB\n", ta_free_bytes() / 1024);
     kputs(buf);
 
     idtInitialize();
@@ -67,6 +44,7 @@ int main(uint32_t mem_low, uint32_t mem_high1, uint32_t mem_high2)
 
     asm("sti");
 
+    ta_free(buf);
     while (1);
     return 0;
 }

@@ -6,7 +6,7 @@ all:
 	    -ffreestanding -nostdlib -fno-pie -no-pie \
 	    -ffunction-sections -fdata-sections -Wl,-gc-sections \
 	    -Wl,-Tstage2.ld \
-	    stage2.c printf.c
+	    stage2.c printf.c idt.c videoram.c tinyalloc.c
 	@objcopy -O binary -j .text stage2.elf stage2.bin
 	@dd if=/dev/zero of=disk.img bs=1k count=1440
 	@mkfs.fat -F 12 -R 16 disk.img
