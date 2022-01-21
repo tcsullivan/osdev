@@ -2,6 +2,7 @@
 
 #include "port.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
@@ -22,6 +23,8 @@ static const idtr_t idt_idtr = {
     .limit = 256 * sizeof(idt_entry_t) - 1,
     .base = IDT_ADDR
 };
+
+static irq_handler_t irq_handlers[16];
 
 __attribute__((naked)) static void isr_unused0(void) { asm("cli; push 0; push 0; jmp isr_common"); }
 __attribute__((naked)) static void isr_unused1(void) { asm("cli; push 0; push 1; jmp isr_common"); }
@@ -78,6 +81,10 @@ static void isr_common_main(uint32_t n, uint32_t e)
     e &= 0xFF;
 
     if (n >= 32) {
+        irq_handler_t handler = irq_handlers[n - 32];
+        if (handler != NULL)
+            handler();
+
         outb(0x20, 0x20);
         if (n >= 40)
             outb(0xA0, 0x20);
@@ -98,11 +105,19 @@ static void idtSetEntry(unsigned int n, void (*handler)(void))
     idt_table[n].flags = 0x8E;
 }
 
+void irqInstallHandler(unsigned int n, irq_handler_t handler)
+{
+    irq_handlers[n] = handler;
+}
+
 void idtInitialize(void)
 {
     char *idt_table_cptr = (char *)idt_table;
     for (unsigned int i = 0; i <= idt_idtr.limit; ++i)
         *idt_table_cptr++ = 0;
+
+    for (unsigned int i = 0; i < 16; ++i)
+        irq_handlers[i] = NULL;
 
     idtSetEntry(0, isr_unused0);
     idtSetEntry(1, isr_unused1);
