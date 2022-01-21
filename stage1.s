@@ -1,12 +1,22 @@
 org 0x3E
 bits 16
 
+; 1. Loads rest of stage1 from second sector.
+; 2. Searches root directory of this FAT12 partition for KERNEL.SYS
+;    Print 'E' on error.
+;    Root dir loaded to 0x8000.
+; 3. Load KERNEL.SYS to 0x10000.
+; 4. A20 gate, check memory sizes.
+; 5. Load GDT, enter protected mode.
+; 6. Call KERNEL.SYS main at 0x10000 (mem sizes passed as args).
+; TODO organize
+; TODO pass kmain() args in struct?
+
 boot:
     cli
 .initSegments:
     mov ax, 0x07C0
     mov ds, ax
-;    mov es, ax
     mov fs, ax
     mov gs, ax
     xor ax, ax
@@ -21,6 +31,7 @@ boot:
     mov es, ax
     mov ax, 1
     xor bx, bx
+    mov cx, 1
     call floppyread
     mov ax, 0x07C0
     mov es, ax
@@ -30,8 +41,6 @@ boot:
     mov cx, msg_end - msg
     xor dx, dx
     mov bp, msg
-    nop
-    nop
     int 0x10
 
     call getmeminfo
@@ -43,6 +52,12 @@ boot:
     mul word [ds:0x16]
     add ax, bx          ; ax = first_root_dir_sector
     push ax
+
+    mov cx, [ds:0x11]
+    shl cx, 5           ; mul word 32
+    add cx, 511
+    shr cx, 9           ; div word 512
+                        ; cx = root_dir_sector_count
 
     mov bx, 0x0800
     mov es, bx
@@ -89,7 +104,10 @@ boot:
     mov bx, 0x1000
     mov es, bx
     mov bx, di          ; es:bx = load addr
+    push cx
+    mov cx, 1
     call floppyread     ; loaded cluster. now, find next in FAT:
+    pop cx
 
     pop ax              ; ax = current cluster
     push ax
@@ -106,7 +124,10 @@ boot:
     mov bx, 0x0800
     mov es, bx
     xor bx, bx
+    push cx
+    mov cx, 1
     call floppyread     ; fat table to 0x8000
+    pop cx
 
     xchg di, dx
     mov ax, [es:di]     ; ax = table value
@@ -150,8 +171,11 @@ boot:
 
 ; ax = LBA
 ; es:bx = store addr
+; cx = sector count
 floppyread:
     pusha
+    push cx
+    push cx
 
     xor dx, dx
     div word [ds:0x18]
@@ -165,11 +189,13 @@ floppyread:
     mov ch, al
     mov dh, dl
     mov dl, 0x00        ; 0x00 = 1st floppy drive
-    mov ax, 0x0201      ; read one sector
+    pop ax              ; ax = sector count
+    mov ah, 0x02
 
     int 0x13
     jc .fail
-    cmp ax, 0x0001  ; confirm one sector read
+    pop cx
+    cmp ax, cx
     jne .fail
     popa
     ret
@@ -240,9 +266,6 @@ gdtr:
 bits 32
 
 stage2Entry:
-    nop
-    nop
-    nop
     mov dx, 0x10
     mov ds, dx
     mov es, dx
